@@ -174,7 +174,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String fullShortUrl = request.getServerName() + "/" + shortUrl;
         //防止缓存穿透，布隆过滤器里没有短链接就肯定没有
         if (!shortLinkBloomFilter.contains(fullShortUrl)) {
-            throw new ClientException("短链接记录不存在");
+            ((HttpServletResponse) response).sendRedirect("/page/notfound");
+            return;
         }
 
         //布隆过滤器里有，也可能是误判，如果数据库发现没有则要缓存空值
@@ -202,6 +203,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
             if (shortLinkGotoDO == null) {//布隆过滤器误判有短链接，所以这里要缓存空值，防止下次再打到数据库
                 stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect(originUrl);
                 return;
             }
 
@@ -213,12 +215,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             ShortLinkDO shortLinkDO = baseMapper.selectOne(shortLinkDOQueryWrapper);
             if (shortLinkDO == null) {//布隆过滤器误判有短链接，所以这里要缓存空值，防止下次再打到数据库
                 stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect(originUrl);
                 return;
             }
 
             //判断短链接是否过期
             if (shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().after(new Date())){
                 stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect(originUrl);
             }
 
             //把originUrl存到redis 并且重定向
