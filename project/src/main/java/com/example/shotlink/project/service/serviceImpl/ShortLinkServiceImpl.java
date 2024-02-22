@@ -21,6 +21,7 @@ import com.example.shotlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.example.shotlink.project.service.ShortLinkService;
 import com.example.shotlink.project.util.BeanUtil;
 import com.example.shotlink.project.util.HashUtil;
+import com.example.shotlink.project.util.ShortLinkUtil;
 import io.lettuce.core.RedisClient;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -40,6 +41,7 @@ import static com.example.shotlink.project.common.constants.RedisKeyConstant.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 @Service
@@ -80,6 +82,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.insert(shortLinkDO);
             shortLinkGotoMapper.insert(shortLinkGotoDO);
             shortLinkBloomFilter.add(fullShortLinkUrl);
+            //缓存预热 根据有效期类型设置不同的过期时间
+            stringRedisTemplate.opsForValue().set(
+                    SHORT_LINK_KEY + fullShortLinkUrl,
+                    param.getOriginUrl(),
+                    ShortLinkUtil.getCacheValidDate(param.getValidDate()),
+                    TimeUnit.MILLISECONDS);
             ShortLinkCreateRespDTO respDTO = BeanUtil.convert(shortLinkDO, ShortLinkCreateRespDTO.class);
             respDTO.setFullShortUrl("http://" + respDTO.getFullShortUrl());
             return respDTO;
