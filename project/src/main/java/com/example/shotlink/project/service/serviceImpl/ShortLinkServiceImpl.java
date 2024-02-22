@@ -212,7 +212,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
 
             //把originUrl存到redis 并且重定向
-            stringRedisTemplate.opsForValue().set(LOCK_SHORT_LINK_KEY + fullShortUrl, shortLinkDO.getOriginUrl());
+            stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, shortLinkDO.getOriginUrl());
             ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
             return;
         } finally {
