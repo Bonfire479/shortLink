@@ -1,0 +1,31 @@
+import org.junit.Test;
+
+public class ShortLinkTest {
+    @Test
+    public void test1(){
+        for (int i = 0; i < 16; i++) {
+            System.out.println("drop table `t_link_"+i+"`;" +
+                    "CREATE TABLE `t_link_"+ i +"` (\n" +
+                    "  `id` int NOT NULL,\n" +
+                    "  `domain` varchar(128) DEFAULT NULL COMMENT '域名',\n" +
+                    "  `short_uri` varchar(8) DEFAULT NULL COMMENT '短链接',\n" +
+                    "  `full_short_url` varchar(128) DEFAULT NULL COMMENT '完整短链接',\n" +
+                    "  `origin_url` varchar(1024) DEFAULT NULL COMMENT '原始链接',\n" +
+                    "  `click_num` int DEFAULT NULL COMMENT '点击量',\n" +
+                    "  `gid` varchar(32) DEFAULT 'default',\n" +
+                    "  `favicon` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '网站图标',\n" +
+                    "  `enable_status` tinyint(1) DEFAULT NULL COMMENT '启用标识 0:启用 1:未启用',\n" +
+                    "  `created_type` tinyint(1) DEFAULT NULL COMMENT '创建类型 0:接口 1:控制台',\n" +
+                    "  `valid_date_type` tinyint(1) DEFAULT NULL COMMENT '有效期类型',\n" +
+                    "  `valid_date` datetime DEFAULT NULL COMMENT '有效期',\n" +
+                    "  `describe` varchar(1024) DEFAULT NULL COMMENT '描述',\n" +
+                    "  `create_time` datetime DEFAULT NULL COMMENT '创建时间',\n" +
+                    "  `update_time` datetime DEFAULT NULL COMMENT '修改时间',\n" +
+                    "  `del_flag` tinyint(1) DEFAULT NULL COMMENT '逻辑删除标识 0:未删除 1:已删除',\n" +
+                    "  PRIMARY KEY (`id`),\n" +
+                    "  UNIQUE KEY `uniq_idx_full_short_url` (`full_short_url`) USING BTREE COMMENT '完整短链接唯一索引'\n" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;");
+
+        }
+    }
+}

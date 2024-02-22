@@ -1,11 +1,11 @@
-package com.example.shortlink.admin;
+package com.example.shotlink.project;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class AdminApplication {
+public class ShortLinkApplication {
     public static void main(String[] args) {
-        SpringApplication.run(AdminApplication.class, args);
+        SpringApplication.run(ShortLinkApplication.class, args);
     }
 }
