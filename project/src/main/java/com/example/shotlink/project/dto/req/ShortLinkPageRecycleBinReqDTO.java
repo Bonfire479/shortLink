@@ -1,12 +1,17 @@
 package com.example.shotlink.project.dto.req;
 
+
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.shotlink.project.dao.entity.ShortLinkDO;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.*;
+
+import java.util.List;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @EqualsAndHashCode(callSuper = true)
-public class ShortLinkPageReqDTO extends Page<ShortLinkDO> {
-    private String gid;
+public class ShortLinkPageRecycleBinReqDTO extends Page<ShortLinkDO> {
+    private List<String> gidList;
 }

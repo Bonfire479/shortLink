@@ -29,6 +29,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -39,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static com.example.shotlink.project.common.constants.RedisKeyConstant.*;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +78,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         shortLinkDO.setShortUri(shortLink);
         shortLinkDO.setFullShortUrl(param.getDomain() + "/" + shortLink);
         shortLinkDO.setEnableStatus(0);
+        shortLinkDO.setFavicon(getUrlFavicon(param.getOriginUrl()));
 
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
                 .fullShortUrl(fullShortLinkUrl)
@@ -178,7 +184,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             return;
         }
 
-        //布隆过滤器里有，也可能是误判，如果数据库发现没有则要缓存空值
+        //布隆过滤器里有，检查一下是不是空值、过期、在回收站的短链接
+        String isNull = stringRedisTemplate.opsForValue().get(SHORT_LINK_IS_NULL_KEY + fullShortUrl);
+        if (StrUtil.isNotBlank(isNull)){
+            ((HttpServletResponse) response).sendRedirect("/page/notfound");
+            return;
+        }
 
         //redis存在短链接
         String originUrl = stringRedisTemplate.opsForValue().get(SHORT_LINK_KEY + fullShortUrl);
@@ -192,6 +203,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         lock.lock();
         try {
             //双重检查
+            originUrl = stringRedisTemplate.opsForValue().get(SHORT_LINK_KEY + fullShortUrl);
             if (StrUtil.isNotBlank(originUrl)) {
                 ((HttpServletResponse) response).sendRedirect(originUrl);
                 return;
@@ -202,8 +214,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
             ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
             if (shortLinkGotoDO == null) {//布隆过滤器误判有短链接，所以这里要缓存空值，防止下次再打到数据库
-                stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
-                ((HttpServletResponse) response).sendRedirect(originUrl);
+                stringRedisTemplate.opsForValue().set(SHORT_LINK_IS_NULL_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect("/page/notfound");
                 return;
             }
 
@@ -211,18 +223,19 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             String gid = shortLinkGotoDO.getGid();
             LambdaQueryWrapper<ShortLinkDO> shortLinkDOQueryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                     .eq(ShortLinkDO::getGid, gid)
-                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl);
+                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                    .eq(ShortLinkDO::getEnableStatus, 0);
             ShortLinkDO shortLinkDO = baseMapper.selectOne(shortLinkDOQueryWrapper);
-            if (shortLinkDO == null) {//布隆过滤器误判有短链接，所以这里要缓存空值，防止下次再打到数据库
-                stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
-                ((HttpServletResponse) response).sendRedirect(originUrl);
+            if (shortLinkDO == null) {//布隆过滤器误判有短链接，所以这里要缓存空值，防止下次再打到数据库，为空也可能是enableStatus为1，即短链接在回收站里
+                stringRedisTemplate.opsForValue().set(SHORT_LINK_IS_NULL_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect("/page/notfound");
                 return;
             }
 
             //判断短链接是否过期
             if (shortLinkDO.getValidDate() != null && shortLinkDO.getValidDate().after(new Date())){
-                stringRedisTemplate.opsForValue().set(SHORT_LINK_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
-                ((HttpServletResponse) response).sendRedirect(originUrl);
+                stringRedisTemplate.opsForValue().set(SHORT_LINK_IS_NULL_KEY + fullShortUrl, "-", 30, TimeUnit.MINUTES);
+                ((HttpServletResponse) response).sendRedirect("/page/notfound");
             }
 
             //把originUrl存到redis 并且重定向
@@ -239,5 +252,34 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
     }
 
+
+    public static String getUrlFavicon(String url) {
+        try {
+            // 使用Jsoup连接到URL并获取文档
+            Document doc = Jsoup.connect(url).get();
+
+            // 获取所有的<link>标签
+            Elements linkElements = doc.select("link");
+
+            // 遍历<link>标签，寻找包含图标的标签
+            for (Element linkElement : linkElements) {
+                String rel = linkElement.attr("rel");
+                if (rel.contains("icon") || rel.contains("shortcut")) {
+                    // 获取图标的链接
+                    String href = linkElement.attr("href");
+                    // 可能会有相对路径，需要转换为绝对路径
+                    if (!href.startsWith("http")) {
+                        href = url + href;
+                    }
+                    return href;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 如果无法获取图标链接，则返回空字符串
+        return "";
+    }
 
 }
