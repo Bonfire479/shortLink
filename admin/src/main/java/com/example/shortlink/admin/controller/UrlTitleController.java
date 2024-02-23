@@ -1,7 +1,7 @@
 package com.example.shortlink.admin.controller;
 
 import com.example.shortlink.admin.remote.UrlTitleRemoteService;
-import com.example.shotlink.project.common.convention.result.Result;
+import com.example.shortlink.project.common.convention.result.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;

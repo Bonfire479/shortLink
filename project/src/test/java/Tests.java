@@ -27,4 +27,9 @@ public class Tests {
         }
 
     }
+
+    @Test
+    public void testString(){
+        System.out.printf("");
+    }
 }

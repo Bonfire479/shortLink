@@ -4,14 +4,11 @@ package com.example.shortlink.admin.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.shortlink.admin.common.convention.result.Result;
 import com.example.shortlink.admin.remote.ShortLinkRemoteService;
-import com.example.shortlink.admin.remote.dto.req.ShortLinkCreateBatchReqDTO;
 import com.example.shortlink.admin.remote.dto.req.ShortLinkCreateReqDTO;
 import com.example.shortlink.admin.remote.dto.req.ShortLinkPageReqDTO;
-import com.example.shortlink.admin.remote.dto.resp.ShortLinkCreateBatchRespDTO;
 import com.example.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.example.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
-import com.example.shotlink.project.common.convention.result.Results;
-import com.example.shotlink.project.dto.resp.ShortLinkGroupCountRespDTO;
+import com.example.shortlink.project.dto.resp.ShortLinkGroupCountRespDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

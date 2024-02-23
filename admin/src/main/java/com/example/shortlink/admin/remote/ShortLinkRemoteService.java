@@ -9,11 +9,7 @@ import com.example.shortlink.admin.remote.dto.req.ShortLinkCreateReqDTO;
 import com.example.shortlink.admin.remote.dto.req.ShortLinkPageReqDTO;
 import com.example.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.example.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
-import com.example.shotlink.project.common.convention.result.Results;
-import com.example.shotlink.project.dto.resp.ShortLinkGroupCountRespDTO;
-import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.example.shortlink.project.dto.resp.ShortLinkGroupCountRespDTO;
 
 import java.util.HashMap;
 import java.util.List;

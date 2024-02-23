@@ -1,7 +1,7 @@
 package com.example.shortlink.admin.remote.dto.req;
 
 
-import com.example.shotlink.project.common.enums.ValidDateTypeEnum;
+import com.example.shortlink.project.common.enums.ValidDateTypeEnum;
 import lombok.Data;
 
 import java.util.Date;

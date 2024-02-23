@@ -19,7 +19,7 @@ import com.example.shortlink.admin.remote.ShortLinkRemoteService;
 import com.example.shortlink.admin.service.GroupService;
 import com.example.shortlink.admin.util.BeanUtil;
 import com.example.shortlink.admin.util.GroupIDGenerator;
-import com.example.shotlink.project.dto.resp.ShortLinkGroupCountRespDTO;
+import com.example.shortlink.project.dto.resp.ShortLinkGroupCountRespDTO;
 import lombok.RequiredArgsConstructor;
 import net.sf.jsqlparser.expression.operators.arithmetic.Concat;
 import org.springframework.stereotype.Service;

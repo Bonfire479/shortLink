@@ -3,12 +3,8 @@ package com.example.shortlink.admin.remote;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
-import com.example.shotlink.project.common.convention.result.Result;
-import com.example.shotlink.project.common.convention.result.Results;
-import org.springframework.web.bind.annotation.RequestParam;
-
-import java.util.HashMap;
-import java.util.Map;
+import com.example.shortlink.project.common.convention.result.Result;
+import com.example.shortlink.project.common.convention.result.Results;
 
 public interface UrlTitleRemoteService {
     default Result<String> getTitleByUrl(String url){
