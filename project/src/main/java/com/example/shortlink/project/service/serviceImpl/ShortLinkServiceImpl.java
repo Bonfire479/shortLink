@@ -1,5 +1,6 @@
 package com.example.shortlink.project.service.serviceImpl;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.StrUtil;
@@ -18,10 +19,7 @@ import com.example.shortlink.project.common.util.StatsUtil;
 import com.example.shortlink.project.dao.entity.*;
 import com.example.shortlink.project.dao.mapper.*;
 import com.example.shortlink.project.dto.req.*;
-import com.example.shortlink.project.dto.resp.ShortLinkCreateBatchRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkGroupCountRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import com.example.shortlink.project.dto.resp.*;
 import com.example.shortlink.project.service.ShortLinkService;
 import com.example.shortlink.project.common.util.BeanUtil;
 import com.example.shortlink.project.common.util.HashUtil;
@@ -49,6 +47,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -79,6 +78,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Value("short-link.stats.locale.amap-key")
     private static String amapKey;
+
     @Transactional
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO param) {
@@ -308,8 +308,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
 
         String ip = StatsUtil.getUserIP((HttpServletRequest) request);
+        String network = StatsUtil.getNetwork((HttpServletRequest) request);
+        String device = StatsUtil.getDevice((HttpServletRequest) request);
+        String browser = StatsUtil.getBrowser((HttpServletRequest) request);
+        String os = StatsUtil.getOS((HttpServletRequest) request);
         Long uipAdd = stringRedisTemplate.opsForSet().add(SHORT_LINK_STATS_UIP + fullShortUrl, ip);
-        if (uipAdd != null && uipAdd > 0L){
+        if (uipAdd != null && uipAdd > 0L) {
             uip.set(1);
         }
 
@@ -322,12 +326,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
         //统计pv,uv,uip
         Date date = new Date();
-        int weekOfMonth = DateUtil.weekOfMonth(date);
+        int dayOfWeek = DateUtil.dayOfWeek(date);
         int hour = DateUtil.hour(date, true);
         LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                 .gid(gid)
                 .fullShortUrl(fullShortUrl)
-                .weekday(weekOfMonth)
+                .weekday(dayOfWeek)
                 .hour(hour)
                 .date(date)
                 .pv(1)
@@ -357,11 +361,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String adcode = localeResultStr.getString("adcode");
 
         //用infoCode是否正确和province是否存在来检测返回结果
-        if (StrUtil.isNotBlank(infoCode) && infoCode.equals("10000") && StrUtil.isNotBlank(province)){
+        if (StrUtil.isNotBlank(infoCode) && infoCode.equals("10000") && StrUtil.isNotBlank(province)) {
             linkLocaleStatsDO.setProvince(province);
             linkLocaleStatsDO.setCity(city);
             linkLocaleStatsDO.setAdcode(adcode);
-        }else {
+        } else {
             linkLocaleStatsDO.setProvince("未知");
             linkLocaleStatsDO.setCity("未知");
             linkLocaleStatsDO.setAdcode("未知");
@@ -370,8 +374,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         //统计地区
         linkLocaleStatsMapper.shortLinkStats(linkLocaleStatsDO);
 
-
-        String os = StatsUtil.getOS((HttpServletRequest) request);
         LinkOSStatsDO linkOSStatsDO = LinkOSStatsDO.builder()
                 .gid(gid)
                 .fullShortUrl(fullShortUrl)
@@ -382,7 +384,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         //统计操作系统
         linkOSStatsMapper.shortLinkStats(linkOSStatsDO);
 
-        String browser = StatsUtil.getBrowser((HttpServletRequest) request);
         LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
                 .gid(gid)
                 .fullShortUrl(fullShortUrl)
@@ -400,6 +401,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .os(os)
                 .browser(browser)
                 .ip(ip)
+                .device(device)
+                .network(network)
+                .locale(String.format("中国-%s-%s", province, city))
                 .build();
         //访问日志 每次访问都会记录
         linkAccessLogsMapper.shortLinkStats(linkAccessLogsDO);
@@ -409,7 +413,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .fullShortUrl(fullShortUrl)
                 .cnt(1)
                 .date(date)
-                .device(StatsUtil.getDevice((HttpServletRequest) request))
+                .device(device)
                 .build();
         //统计设备
         linkDeviceStatsMapper.shortLinkStats(linkDeviceStatsDO);
@@ -419,10 +423,152 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .fullShortUrl(fullShortUrl)
                 .date(date)
                 .cnt(1)
-                .network(StatsUtil.getNetwork((HttpServletRequest) request))
+                .network(network)
                 .build();
         //统计网络
         linkNetworkStatsMapper.shortLinkNetworkState(linkNetworkStatsDO);
+    }
+
+
+    @Override
+    public LinkAllStatsByDateRespDTO getLinkAllStatsByDate(LinkAllStatsByDateReqDTO param) {
+        //基础访问数据pv,uv,uip
+        long pvSum = 0, uvSum = 0, uipSum = 0;
+        List<LinkAccessStatsByDateRespDTO> accessStatsByDateList = linkAccessStatsMapper.selectBaseAccessStatsByDate(param);
+        //基础访问数据都没有则返回空
+        if (CollectionUtil.isEmpty(accessStatsByDateList)) {
+            return null;
+        }
+        for (LinkAccessStatsByDateRespDTO accessStatsByDate : accessStatsByDateList) {
+            pvSum += accessStatsByDate.getPv();
+            uvSum += accessStatsByDate.getUv();
+            uipSum += accessStatsByDate.getUip();
+        }
+
+        //地区访问数据
+        long localeAccessCntSum = 0;
+        List<LinkLocaleStatsByDateRespDTO> localeStatsByDateList = linkLocaleStatsMapper.selectLocalStatsByDate(param);
+        for (LinkLocaleStatsByDateRespDTO localeStatsByDate : localeStatsByDateList) {
+            localeAccessCntSum += localeStatsByDate.getCnt();
+        }
+        for (LinkLocaleStatsByDateRespDTO localeStatsByDate : localeStatsByDateList) {
+            localeStatsByDate.setRatio((double) localeStatsByDate.getCnt() / localeAccessCntSum);
+        }
+
+        //24小时访问数据
+        List<LinkAccessStatsByHourRespDTO> accessStatsByHourList = linkAccessStatsMapper.selectAccessStatsByHour(param);
+
+        //高频访问ip
+        List<LinkAccessHighFrequencyStatsByIPRespDTO> highFrequencyStatsByIPList = linkAccessLogsMapper.selectHighFrequencyStatsByIP(param);
+
+        //周分布访问数据
+        List<LinkAccessStatsByDayOfWeekRespDTO> accessStatsByDayOfWeekList = linkAccessStatsMapper.selectAccessStatsByDayOfWeek(param);
+
+        //操作系统访问数据
+        long OSAccessCntSum = 0;
+        List<LinkAccessStatsByOSRespDTO> accessStatsByOSList = linkOSStatsMapper.selectAccessStatsByOS(param);
+        for (LinkAccessStatsByOSRespDTO linkAccessStatsByOS : accessStatsByOSList) {
+            OSAccessCntSum += linkAccessStatsByOS.getCnt();
+        }
+        for (LinkAccessStatsByOSRespDTO linkAccessStatsByOS : accessStatsByOSList) {
+            linkAccessStatsByOS.setRatio((double) linkAccessStatsByOS.getCnt() / OSAccessCntSum);
+        }
+
+        //浏览器访问数据
+        long browserAccessCntSum = 0;
+        List<LinkAccessStatsByBrowserRespDTO> accessStatsByBrowserList = linkBrowserStatsMapper.selectAccessStatsByBrowser(param);
+        for (LinkAccessStatsByBrowserRespDTO linkAccessStatsByBrowser : accessStatsByBrowserList) {
+            browserAccessCntSum += linkAccessStatsByBrowser.getCnt();
+        }
+        for (LinkAccessStatsByBrowserRespDTO linkAccessStatsByBrowser : accessStatsByBrowserList) {
+            linkAccessStatsByBrowser.setRatio((double) linkAccessStatsByBrowser.getCnt() / browserAccessCntSum);
+        }
+
+        //设备访问数据
+        long deviceAccessCntSum = 0;
+        List<LinkAccessStatsByDeviceRespDTO> accessStatsByDeviceList = linkDeviceStatsMapper.selectAccessStatsByDevice(param);
+        for (LinkAccessStatsByDeviceRespDTO linkAccessStatsByDevice : accessStatsByDeviceList) {
+            deviceAccessCntSum += linkAccessStatsByDevice.getCnt();
+        }
+        for (LinkAccessStatsByDeviceRespDTO linkAccessStatsByDevice : accessStatsByDeviceList) {
+            linkAccessStatsByDevice.setRatio((double) linkAccessStatsByDevice.getCnt() / deviceAccessCntSum);
+        }
+
+        //网络环境访问数据
+        long networkAccessCntSum = 0;
+        List<LinkAccessStatsByNetworkRespDTO> accessStatsByNetworkList = linkNetworkStatsMapper.selectAccessStatsByNetwork(param);
+        for (LinkAccessStatsByNetworkRespDTO linkAccessStatsByNetwork : accessStatsByNetworkList) {
+            networkAccessCntSum += linkAccessStatsByNetwork.getCnt();
+        }
+        for (LinkAccessStatsByNetworkRespDTO linkAccessStatsByNetwork : accessStatsByNetworkList) {
+            linkAccessStatsByNetwork.setRatio((double) linkAccessStatsByNetwork.getCnt() / networkAccessCntSum);
+        }
+
+        //访客类型访问数据
+        HashMap<String, Object> userTypeMap = linkAccessLogsMapper.selectAccessStatsByUserType(param);
+        long userSum = 0;
+        List<LinkAccessStatsUserTypeRespDTO> userTypeList = new ArrayList<>();
+        long oldUserCount = ((BigDecimal) userTypeMap.get("oldUserCount")).longValue();
+        long newUserCount = ((BigDecimal) userTypeMap.get("newUserCount")).longValue();
+        userSum = oldUserCount + newUserCount;
+        LinkAccessStatsUserTypeRespDTO oldUser = LinkAccessStatsUserTypeRespDTO.builder()
+                .userType("oldUser")
+                .cnt(oldUserCount)
+                .ratio((double) oldUserCount / userSum)
+                .build();
+        LinkAccessStatsUserTypeRespDTO newUser = LinkAccessStatsUserTypeRespDTO.builder()
+                .userType("newUser")
+                .cnt(newUserCount)
+                .ratio((double) newUserCount / userSum)
+                .build();
+        userTypeList.add(oldUser);
+        userTypeList.add(newUser);
+
+        LinkAllStatsByDateRespDTO result = LinkAllStatsByDateRespDTO.builder()
+                .pvSum(pvSum)
+                .uvSum(uvSum)
+                .uipSum(uipSum)
+                .accessStatsByDateList(accessStatsByDateList)
+                .localeStatsByDateList(localeStatsByDateList)
+                .accessStatsByBrowserList(accessStatsByBrowserList)
+                .accessStatsByDayOfWeekList(accessStatsByDayOfWeekList)
+                .accessStatsByDeviceList(accessStatsByDeviceList)
+                .accessStatsByHourList(accessStatsByHourList)
+                .accessStatsByNetworkList(accessStatsByNetworkList)
+                .accessStatsByOSList(accessStatsByOSList)
+                .highFrequencyStatsByIPList(highFrequencyStatsByIPList)
+                .userTypeList(userTypeList)
+                .build();
+        return result;
+    }
+
+    @Override
+    public IPage<LinkAccessRecordPageRespDTO> pageLinkAccessRecord(LinkAccessRecordPageReqDTO param) {
+        LambdaQueryWrapper<LinkAccessLogsDO> queryWrapper = Wrappers.lambdaQuery(LinkAccessLogsDO.class)
+                .eq(LinkAccessLogsDO::getGid, param.getGid())
+                .eq(LinkAccessLogsDO::getFullShortUrl, param.getFullShortUrl())
+                .between(LinkAccessLogsDO::getCreateTime, param.getStartDate(), param.getEndDate());
+        IPage<LinkAccessLogsDO> page = linkAccessLogsMapper.selectPage(param, queryWrapper);
+        if (page.getRecords().isEmpty()){
+            return null;
+        }
+
+        List<String> userList = page.getRecords().stream().map(LinkAccessLogsDO::getUser).distinct().toList();
+        List<Map<String, Object>> userTypeMapList = linkAccessLogsMapper.getUserTypeByUsers(userList, param.getGid(), param.getFullShortUrl(), param.getStartDate(), param.getEndDate());
+
+        IPage<LinkAccessRecordPageRespDTO> result = page.convert(each -> {
+            LinkAccessRecordPageRespDTO convert = BeanUtil.convert(each, LinkAccessRecordPageRespDTO.class);
+            convert.setAccessTime(each.getCreateTime().toString());
+            userTypeMapList.stream().filter(
+                    map -> map.get("user").equals(each.getUser()))
+                    .findFirst()
+                    .ifPresent(
+                            map -> convert.setUserType(map.get("userType").toString())
+                    );
+            return convert;
+        });
+
+        return result;
     }
 
 
@@ -454,7 +600,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         // 如果无法获取图标链接，则返回空字符串
         return "";
     }
-
 
 
 }

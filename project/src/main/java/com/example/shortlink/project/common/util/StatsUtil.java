@@ -28,7 +28,12 @@ public class StatsUtil {
         return ipAddress;
     }
 
-
+    /**
+     * 获取用户访问操作系统
+     *
+     * @param request 请求
+     * @return 访问操作系统
+     */
     public static String getOS(HttpServletRequest request) {
         String os = request.getHeader("User-Agent");
         String result = "";

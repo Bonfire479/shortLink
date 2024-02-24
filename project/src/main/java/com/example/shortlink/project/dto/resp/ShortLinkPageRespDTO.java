@@ -44,7 +44,6 @@ public class ShortLinkPageRespDTO {
      */
     private String favicon;
 
-
     /**
      * 有效期类型
      */
@@ -59,5 +58,9 @@ public class ShortLinkPageRespDTO {
      * 描述
      */
     private String description;
+
+    private long totalPv;
+    private long totalUv;
+    private long totalUip;
 
 }

@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.shortlink.project.common.convention.result.Result;
 import com.example.shortlink.project.common.convention.result.Results;
 import com.example.shortlink.project.dto.req.*;
-import com.example.shortlink.project.dto.resp.ShortLinkCreateBatchRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkGroupCountRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import com.example.shortlink.project.dto.resp.*;
 import com.example.shortlink.project.service.ShortLinkService;
 
 import jakarta.servlet.ServletRequest;
@@ -48,13 +45,13 @@ public class ShortLinkController {
         return Results.success(shortLinkService.groupCountShortLink(gidList));
     }
 
-    @PostMapping("/api/short-link/admin/v1/update")
+    @PostMapping("/api/short-link/v1/update")
     public Result<Void> updateShortLink(UpdateShortLinkReqDTO param){
         shortLinkService.updateShortLink(param);
         return Results.success();
     }
 
-    @PostMapping("/api/short-link/admin/v1/changeGroup")
+    @PostMapping("/api/short-link/v1/changeGroup")
     public Result<Boolean> changeShortLinkGroup(ShortLinkChangeGroupReqDTO param){
         return Results.success(shortLinkService.changeShortLinkGroup(param));
     }
@@ -64,4 +61,13 @@ public class ShortLinkController {
         shortLinkService.restoreUrl(shortUrl, request, response);
     }
 
+    @GetMapping("/api/short-link/v1/all-stats")
+    public Result<LinkAllStatsByDateRespDTO> getLinkAllStatsByDate(LinkAllStatsByDateReqDTO param){
+        return Results.success(shortLinkService.getLinkAllStatsByDate(param));
+    }
+
+    @GetMapping("/api/short-link/admin/v1/stats/access-record")
+    public Result<IPage<LinkAccessRecordPageRespDTO>> pageLinkAccessRecord(LinkAccessRecordPageReqDTO param){
+        return Results.success(shortLinkService.pageLinkAccessRecord(param));
+    }
 }

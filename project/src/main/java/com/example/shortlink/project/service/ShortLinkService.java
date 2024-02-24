@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.shortlink.project.dao.entity.ShortLinkDO;
 import com.example.shortlink.project.dto.req.*;
-import com.example.shortlink.project.dto.resp.ShortLinkCreateBatchRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkGroupCountRespDTO;
-import com.example.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import com.example.shortlink.project.dto.resp.*;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 
@@ -27,4 +24,8 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     Boolean changeShortLinkGroup(ShortLinkChangeGroupReqDTO param);
 
     void restoreUrl(String shortUrl, ServletRequest request, ServletResponse response);
+
+    LinkAllStatsByDateRespDTO getLinkAllStatsByDate(LinkAllStatsByDateReqDTO param);
+
+    IPage<LinkAccessRecordPageRespDTO> pageLinkAccessRecord(LinkAccessRecordPageReqDTO param);
 }

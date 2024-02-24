@@ -91,6 +91,12 @@ public class ShortLinkDO extends BaseDO implements Serializable {
     @TableField("description")
     private String description;
 
+    private long totalPv;
+    private long totalUv;
+    private long totalUip;
+
+
+
     @TableLogic
     private int del_flag;
 
